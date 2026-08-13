@@ -473,9 +473,12 @@ function renderYoyChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { labels: { color: '#64748b', font: { size: 11 } } },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           backgroundColor: '#ffffff',
           titleColor: '#0f172a',
           bodyColor: '#0f172a',
@@ -486,7 +489,7 @@ function renderYoyChart() {
             afterBody: (items) => {
               if (items.length < 2) return '';
               const a = items[0].raw || 0, b = items[1].raw || 0;
-              if (!a) return '';
+              if (!a) return ' Δ —';
               const pct = ((b - a) / a * 100);
               return ' Δ ' + (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% vs 2025';
             }
@@ -576,16 +579,31 @@ function renderTargetChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { labels: { color: '#64748b', font: { size: 11 } } },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           backgroundColor: '#ffffff',
           titleColor: '#0f172a',
           bodyColor: '#0f172a',
           borderColor: '#e2e8f0',
           borderWidth: 1,
           callbacks: {
-            label: ctx => ' ' + ctx.dataset.label + ': ' + formatFull(ctx.raw)
+            label: ctx => ' ' + ctx.dataset.label + ': ' + formatFull(ctx.raw),
+            afterBody: (items) => {
+              if (items.length < 2) return '';
+              const target = items[0].raw || 0;
+              const real = items[1].raw || 0;
+              if (!target) return ' Pencapaian: —';
+              const pct = (real / target * 100);
+              const sisa = target - real;
+              return [
+                ' Pencapaian: ' + pct.toFixed(1) + '%',
+                sisa >= 0 ? ' Kurang: ' + formatFull(sisa) : ' Surplus: ' + formatFull(-sisa)
+              ];
+            }
           }
         }
       },
