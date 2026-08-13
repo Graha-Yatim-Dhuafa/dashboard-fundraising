@@ -2067,11 +2067,11 @@
         const yoyEl = document.getElementById("yoyKpiGrid");
         if (yoyEl) {
           yoyEl.innerHTML = `
-      <div class="kpi-card"><div class="label">Realisasi 2025 (YTD)</div><div class="value">${formatRp(sum25)}</div><div class="sub">Jan–${curMonth}</div></div>
-      <div class="kpi-card green"><div class="label">Realisasi 2026 (YTD)</div><div class="value">${formatRp(sum26)}</div><div class="sub">Jan–${curMonth}</div></div>
-      <div class="kpi-card ${growth >= 0 ? "green" : "red"}"><div class="label">Pertumbuhan YTD</div><div class="value">${growth >= 0 ? "+" : ""}${growth.toFixed(1)}%</div><div class="sub">2026 vs 2025 periode sama</div></div>
-      <div class="kpi-card blue"><div class="label">${curMonth} 2025</div><div class="value">${formatRp(m25)}</div><div class="sub">${formatFull(m25)}</div></div>
-      <div class="kpi-card green"><div class="label">${curMonth} 2026</div><div class="value">${formatRp(m26)}</div><div class="sub">${formatFull(m26)}</div></div>
+      <div class="kpi-card purple"><div class="label">Realisasi 2025 (YTD)</div><div class="value">${formatRp(sum25)}</div><div class="sub">Jan–${curMonth}</div></div>
+      <div class="kpi-card teal"><div class="label">Realisasi 2026 (YTD)</div><div class="value">${formatRp(sum26)}</div><div class="sub">Jan–${curMonth}</div></div>
+      <div class="kpi-card ${growth >= 0 ? "orange" : "red"}"><div class="label">Pertumbuhan YTD</div><div class="value">${growth >= 0 ? "+" : ""}${growth.toFixed(1)}%</div><div class="sub">2026 vs 2025 periode sama</div></div>
+      <div class="kpi-card cyan"><div class="label">${curMonth} 2025</div><div class="value">${formatRp(m25)}</div><div class="sub">${formatFull(m25)}</div></div>
+      <div class="kpi-card blue"><div class="label">${curMonth} 2026</div><div class="value">${formatRp(m26)}</div><div class="sub">${formatFull(m26)}</div></div>
       <div class="kpi-card ${growthM >= 0 ? "green" : "red"}"><div class="label">Δ ${curMonth}</div><div class="value">${growthM >= 0 ? "+" : ""}${growthM.toFixed(1)}%</div><div class="sub">bulan ini vs tahun lalu</div></div>
     `;
         }
