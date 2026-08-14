@@ -164,12 +164,10 @@
         <div class="filter-panel">
           <div class="filter-title"><span>⌕</span> Filter Data</div>
           <div class="filter-grid">
-            <div class="filter-group">
+            <div class="filter-group filter-dates">
               <label>Tanggal Mulai</label>
               <input type="date" id="fDateFrom" />
-            </div>
-            <div class="filter-group">
-              <label>Tanggal Akhir</label>
+              <label class="label-spaced">Tanggal Akhir</label>
               <input type="date" id="fDateTo" />
             </div>
             <div class="filter-group">
@@ -181,6 +179,16 @@
                 ></label
               >
               <select id="fProgram" multiple></select>
+            </div>
+            <div class="filter-group">
+              <label
+                >Jenis Transaksi
+                <small
+                  style="opacity: 0.55; text-transform: none; letter-spacing: 0"
+                  >(multi)</small
+                ></label
+              >
+              <select id="fJenis" multiple></select>
             </div>
             <div class="filter-group">
               <label>User Insert</label>

@@ -265,6 +265,13 @@
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 12px;
     }
+    .filter-group.filter-dates {
+      display: flex;
+      flex-direction: column;
+    }
+    .filter-group.filter-dates .label-spaced {
+      margin-top: 10px;
+    }
     .filter-group label {
       display: block;
       font-size: 0.68rem;

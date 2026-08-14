@@ -40,7 +40,7 @@ const FALLBACK_Y2025 = [
 let ALL = [];
 let TARGET_DATA = []; // [{bulan, target, realisasi, selisih}] 2026
 let Y2025_DATA = []; // realisasi 2025 per bulan
-let FILTER_OPTS = { programs:[], user_inserts:[], crms:[], via_himpuns:[], min_date:'', max_date:'' };
+let FILTER_OPTS = { programs:[], jenis_list:[], user_inserts:[], crms:[], via_himpuns:[], min_date:'', max_date:'' };
 let charts = {};
 let dataSource = 'none'; // live | snapshot
 
@@ -89,7 +89,7 @@ function toYMD(d) {
 
 function processRows(rawRows) {
   const records = [];
-  const progSet = new Set(), userSet = new Set(), crmSet = new Set(), viaSet = new Set();
+  const progSet = new Set(), jenisSet = new Set(), userSet = new Set(), crmSet = new Set(), viaSet = new Set();
   let minD = null, maxD = null;
 
   rawRows.forEach(row => {
@@ -120,6 +120,7 @@ function processRows(rawRows) {
     });
 
     if (program) progSet.add(program);
+    if (jenis) jenisSet.add(jenis);
     if (userInsert) userSet.add(userInsert);
     if (crm) crmSet.add(crm);
     if (via) viaSet.add(via);
@@ -130,6 +131,7 @@ function processRows(rawRows) {
   records.sort((a,b) => b.ts - a.ts);
   FILTER_OPTS = {
     programs: [...progSet].sort(),
+    jenis_list: [...jenisSet].sort(),
     user_inserts: [...userSet].sort(),
     crms: ['-'].concat([...crmSet].sort()),
     via_himpuns: [...viaSet].sort(),
@@ -144,7 +146,7 @@ function applyFallback() {
   // No embedded snapshot — keep existing ALL if any, otherwise empty
   dataSource = 'offline';
   if (!ALL.length) {
-    FILTER_OPTS = { programs:[], user_inserts:[], crms:[], via_himpuns:[], min_date:'', max_date:'' };
+    FILTER_OPTS = { programs:[], jenis_list:[], user_inserts:[], crms:[], via_himpuns:[], min_date:'', max_date:'' };
     initFilterUI(false);
     document.getElementById('kpiGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:40px">Tidak dapat memuat data dari Google Sheets.<br><small style="color:var(--muted)">Coba klik Refresh atau buka lewat http://localhost</small></div>';
     document.getElementById('filterCount').textContent = '—';
@@ -191,6 +193,7 @@ function initFilterUI(preserveDates) {
     dt.value = oldTo > today ? today : (oldTo < yearStart ? yearStart : oldTo);
   }
   fillSelect('fProgram', FILTER_OPTS.programs);
+  fillSelect('fJenis', FILTER_OPTS.jenis_list || []);
   fillSelect('fUserInsert', FILTER_OPTS.user_inserts);
   fillSelect('fCRM', FILTER_OPTS.crms);
   fillSelect('fViaHimpun', FILTER_OPTS.via_himpuns);
@@ -323,7 +326,7 @@ function resetFilters() {
   const monthStart = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-01';
   document.getElementById('fDateFrom').value = monthStart;
   document.getElementById('fDateTo').value = today;
-  ['fProgram','fUserInsert','fCRM','fViaHimpun'].forEach(id => {
+  ['fProgram','fJenis','fUserInsert','fCRM','fViaHimpun'].forEach(id => {
     Array.from(document.getElementById(id).options).forEach(o => o.selected = false);
   });
   applyFilters();
@@ -333,6 +336,7 @@ function applyFilters() {
   const dateFrom = document.getElementById('fDateFrom').value;
   const dateTo = document.getElementById('fDateTo').value;
   const programs = getSelected(document.getElementById('fProgram'));
+  const jenisList = getSelected(document.getElementById('fJenis'));
   const users = getSelected(document.getElementById('fUserInsert'));
   const crms = getSelected(document.getElementById('fCRM'));
   const vias = getSelected(document.getElementById('fViaHimpun'));
@@ -341,6 +345,7 @@ function applyFilters() {
     if (dateFrom && r.tgl < dateFrom) return false;
     if (dateTo && r.tgl > dateTo) return false;
     if (programs.length && !programs.includes(r.program)) return false;
+    if (jenisList.length && !jenisList.includes(r.jenis)) return false;
     if (users.length && !users.includes(r.user_insert)) return false;
     if (crms.length) {
       const isEmpty = !r.crm || r.crm === '';
