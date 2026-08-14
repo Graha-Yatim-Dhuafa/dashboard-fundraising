@@ -114,6 +114,7 @@ function processRows(rawRows) {
       tgl: ymd,
       waktu: String(dt.getDate()).padStart(2,'0') + '/' + String(dt.getMonth()+1).padStart(2,'0') + ' ' +
              String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0'),
+      jam: dt.getHours(),
       ts: Math.floor(dt.getTime()/1000),
       nama, program, nominal, user_insert: userInsert, crm, jenis,
       via_himpun: via, sumber, jenis_donatur: jenisDonatur, id_donatur: idDonatur
@@ -379,6 +380,23 @@ function aggregate(rows) {
   const dailyTotals = dailyLabels.map(d => dailyMap[d].total);
   const dailyCounts = dailyLabels.map(d => dailyMap[d].count);
 
+  // 24 jam (00–23), selalu tampil meski kosong
+  const hourlyTotals = Array(24).fill(0);
+  const hourlyCounts = Array(24).fill(0);
+  rows.forEach(r => {
+    let h = r.jam;
+    if (h == null || h === '') {
+      // fallback dari ts
+      if (r.ts) h = new Date(r.ts * 1000).getHours();
+      else return;
+    }
+    h = Number(h);
+    if (h < 0 || h > 23 || isNaN(h)) return;
+    hourlyTotals[h] += r.nominal;
+    hourlyCounts[h] += 1;
+  });
+  const hourlyLabels = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+
   const progMap = {};
   rows.forEach(r => {
     if (!progMap[r.program]) progMap[r.program] = { total:0, count:0 };
@@ -401,7 +419,7 @@ function aggregate(rows) {
   });
 
   return {
-    total, count, uniqueDonors, avg, maxN, dailyLabels, dailyTotals, dailyCounts, progSorted,
+    total, count, uniqueDonors, avg, maxN, dailyLabels, dailyTotals, dailyCounts, hourlyLabels, hourlyTotals, hourlyCounts, progSorted,
     jenisMap, viaMap, sumberMap, jdMap,
     crmSorted: Object.entries(crmMap).sort((a,b)=>b[1].total-a[1].total).slice(0,10),
     topDonors: Object.entries(donorMap).sort((a,b)=>b[1]-a[1]).slice(0,15),
@@ -708,6 +726,57 @@ function renderAll(rows) {
       }
     }
   });
+
+  // Tren per jam (00–23) — mengikuti filter
+  const hourlyCanvas = document.getElementById('chartHourly');
+  if (hourlyCanvas) {
+    charts.hourly = new Chart(hourlyCanvas, {
+      type: 'bar',
+      data: {
+        labels: a.hourlyLabels.map(h => h + ':00'),
+        datasets: [
+          { label: 'Nominal (Rp)', data: a.hourlyTotals, backgroundColor: 'rgba(5,150,105,0.75)', borderColor: '#059669', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+          { label: 'Jumlah Trx', data: a.hourlyCounts, type: 'line', borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,0.12)', tension: 0.3, fill: true, yAxisID: 'y1', pointRadius: 2, pointBackgroundColor: '#d97706' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { labels: { color: '#64748b', font: { size: 11 } } },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: '#ffffff',
+            titleColor: '#0f172a',
+            bodyColor: '#0f172a',
+            borderColor: '#e2e8f0',
+            borderWidth: 1,
+            callbacks: {
+              title: (items) => {
+                const h = items[0] ? items[0].label : '';
+                // 00:00 berarti 00:00–00:59
+                const base = (h || '00:00').slice(0, 2);
+                return 'Jam ' + base + ':00–' + base + ':59';
+              },
+              label: ctx => {
+                if (ctx.dataset.yAxisID === 'y1') {
+                  return ' Jumlah Trx: ' + Number(ctx.raw).toLocaleString('id-ID') + ' trx';
+                }
+                return ' Nominal (Rp): ' + formatFull(ctx.raw);
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 0, autoSkip: false }, grid: { color: 'rgba(226,232,240,0.9)' } },
+          y: { position: 'left', ticks: { color: '#64748b', callback: v => formatRp(v) }, grid: { color: 'rgba(226,232,240,0.9)' } },
+          y1: { position: 'right', ticks: { color: '#64748b' }, grid: { drawOnChartArea: false } }
+        }
+      }
+    });
+  }
 
   const topProg = a.progSorted.slice(0,8);
   const otherProg = a.progSorted.slice(8).reduce((s,x)=>s+x[1].total,0);

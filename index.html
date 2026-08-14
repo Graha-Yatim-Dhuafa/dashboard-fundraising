@@ -217,11 +217,19 @@
         <div class="section-label">Ringkasan Periode</div>
         <div class="kpi-grid" id="kpiGrid"></div>
 
-        <div class="section-label">Tren Harian</div>
+        <div class="section-label">Tren Harian & Per Jam</div>
         <div class="charts-grid">
           <div class="chart-card full">
             <h3>Tren Harian Dana Terkumpul</h3>
             <div class="chart-wrap tall"><canvas id="chartDaily"></canvas></div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card full">
+            <h3>Tren per Jam (00–23)</h3>
+            <div class="chart-wrap tall">
+              <canvas id="chartHourly"></canvas>
+            </div>
           </div>
         </div>
 
