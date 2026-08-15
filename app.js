@@ -105,6 +105,9 @@ function processRows(rawRows) {
     const via = String(row['Via Himpun'] || '').trim();
     const nama = String(row['Nama Donatur'] || '').trim();
     const jenis = String(row['Jenis Transaksi'] || '').trim();
+    // Kecualikan Non Cash dari seluruh dashboard (Global & Operasional)
+    const jenisNorm = jenis.toLowerCase().replace(/\s+/g, '');
+    if (jenisNorm === 'noncash') return;
     const sumber = String(row['Sumber Dana'] || '').trim();
     const jenisDonatur = String(row['Jenis Donatur'] || '').trim();
     const idDonatur = String(row['ID Donatur'] || '').trim();
