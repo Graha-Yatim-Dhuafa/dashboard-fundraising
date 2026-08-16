@@ -414,9 +414,21 @@ function aggregate(rows) {
     const v = r.via_himpun || 'Lainnya'; viaMap[v] = (viaMap[v]||0) + r.nominal;
     const s = r.sumber || 'Lainnya'; sumberMap[s] = (sumberMap[s]||0) + r.nominal;
     const d = r.jenis_donatur || 'Lainnya'; jdMap[d] = (jdMap[d]||0) + r.nominal;
-    if (r.crm) {
-      if (!crmMap[r.crm]) crmMap[r.crm] = { total:0, count:0 };
-      crmMap[r.crm].total += r.nominal; crmMap[r.crm].count += 1;
+    // CRM: tampil terpisah + bar gabungan Alfin dengan kosong (-)
+    {
+      const crmRaw = (r.crm || '').trim();
+      const isEmptyCrm = !crmRaw;
+      const isAlfin = crmRaw.toLowerCase() === 'm alfin al-haris';
+      const crmKey = isEmptyCrm ? '-' : crmRaw;
+      if (!crmMap[crmKey]) crmMap[crmKey] = { total:0, count:0 };
+      crmMap[crmKey].total += r.nominal;
+      crmMap[crmKey].count += 1;
+      if (isEmptyCrm || isAlfin) {
+        const combo = 'M Alfin Al-Haris (+ -)';
+        if (!crmMap[combo]) crmMap[combo] = { total:0, count:0 };
+        crmMap[combo].total += r.nominal;
+        crmMap[combo].count += 1;
+      }
     }
     const nm = r.nama || 'Tanpa Nama'; donorMap[nm] = (donorMap[nm]||0) + r.nominal;
   });
