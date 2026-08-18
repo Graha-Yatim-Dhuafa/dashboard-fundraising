@@ -86,7 +86,7 @@
       flex-shrink: 0;
       background: #fff;
       padding: 2px;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      box-shadow: none;
     }
     .brand-icon {
       width: 44px;
