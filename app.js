@@ -56,6 +56,45 @@ function formatRp(n) {
   return 'Rp ' + Number(n).toLocaleString('id-ID');
 }
 function formatFull(n) { return 'Rp ' + Math.round(n||0).toLocaleString('id-ID'); }
+
+// Label angka di ujung batang (untuk screenshot)
+const barValueLabelsPlugin = {
+  id: 'barValueLabels',
+  afterDatasetsDraw(chart, args, opts) {
+    if (opts && opts.display === false) return;
+    const { ctx } = chart;
+    const horizontal = chart.options.indexAxis === 'y';
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      meta.data.forEach((el, i) => {
+        const v = ds.data[i];
+        if (v == null || Number(v) === 0) return;
+        const pos = el.tooltipPosition();
+        ctx.save();
+        ctx.fillStyle = opts && opts.color ? opts.color : '#334155';
+        ctx.font = (opts && opts.font) || '600 9px DM Sans, system-ui, sans-serif';
+        ctx.textBaseline = 'middle';
+        let text;
+        if (opts && opts.fullNumber) {
+          text = Math.round(Number(v)).toLocaleString('id-ID');
+        } else {
+          text = typeof formatRp === 'function' ? formatRp(v) : String(v);
+        }
+        if (horizontal) {
+          ctx.textAlign = 'left';
+          ctx.fillText(text, pos.x + 6, pos.y);
+        } else {
+          ctx.textAlign = 'center';
+          ctx.fillText(text, pos.x, pos.y - 8);
+        }
+        ctx.restore();
+      });
+    });
+  }
+};
+
+
 function getSelected(sel) { return Array.from(sel.selectedOptions).map(o => o.value); }
 
 function setStatus(type, text) {
@@ -675,6 +714,7 @@ function renderCrmTargetDashboard() {
     if (wrap) wrap.style.height = Math.max(420, chartRows.length * 28 + 80) + 'px';
     charts.crmTarget = new Chart(canvas, {
       type: 'bar',
+      plugins: [barValueLabelsPlugin],
       data: {
         labels: chartRows.map(r => r.label || r.crm),
         datasets: [
@@ -700,9 +740,11 @@ function renderCrmTargetDashboard() {
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: 'y',
+        layout: { padding: { right: 72 } },
         interaction: { mode: 'nearest', axis: 'y', intersect: true },
         plugins: {
           legend: { labels: { color: '#64748b', font: { size: 11 } } },
+          barValueLabels: { display: true, color: '#334155', fullNumber: true },
           tooltip: {
             // index + axis y: tampilkan Target & Realisasi untuk CRM yang sama
             mode: 'index',
