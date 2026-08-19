@@ -1261,6 +1261,39 @@ function renderAll(rows) {
 }
 
 
+
+function downloadCrmTargetChart() {
+  const chart = charts.crmTarget;
+  if (!chart || !chart.canvas) {
+    alert('Grafik belum siap. Tunggu data termuat lalu coba lagi.');
+    return;
+  }
+  try {
+    // canvas dengan background putih agar screenshot tidak transparan
+    const src = chart.canvas;
+    const out = document.createElement('canvas');
+    out.width = src.width;
+    out.height = src.height;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(src, 0, 0);
+    const url = out.toDataURL('image/png');
+    const a = document.createElement('a');
+    const bulanEl = document.getElementById('fCrmTargetMonth');
+    const bulan = bulanEl && bulanEl.value ? String(bulanEl.value).replace(/[^\w\-]+/g, '_') : 'crm';
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = 'target-realisasi-crm-' + bulan + '-' + stamp + '.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (e) {
+    console.warn(e);
+    alert('Gagal mengunduh gambar grafik.');
+  }
+}
+
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-tab') === name);

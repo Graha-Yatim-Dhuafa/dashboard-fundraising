@@ -191,7 +191,18 @@
         ></div>
         <div class="charts-grid">
           <div class="chart-card full">
-            <h3>Target vs Realisasi per CRM</h3>
+            <div class="chart-card-head">
+              <h3>Target vs Realisasi per CRM</h3>
+              <button
+                type="button"
+                class="btn btn-download"
+                id="btnDownloadCrmChart"
+                onclick="downloadCrmTargetChart()"
+                title="Unduh gambar grafik"
+              >
+                ⬇ Unduh PNG
+              </button>
+            </div>
             <div class="chart-wrap" style="height: min(520px, 70vh)">
               <canvas id="chartCrmTarget"></canvas>
             </div>

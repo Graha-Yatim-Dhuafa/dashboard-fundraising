@@ -753,3 +753,32 @@
       border-radius: 8px;
       border: 1px solid var(--border);
     }
+
+
+    .chart-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .chart-card-head h3 {
+      margin: 0;
+    }
+    .btn-download {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-download:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
