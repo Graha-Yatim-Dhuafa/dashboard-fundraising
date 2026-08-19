@@ -534,10 +534,6 @@
       font-size: 0.68rem;
       font-weight: 800;
     }
-    tr:nth-child(-n+3) .rank {
-      background: linear-gradient(135deg, #059669, #2563eb);
-      color: #fff;
-    }
     .tag {
       display: inline-block;
       padding: 3px 8px;

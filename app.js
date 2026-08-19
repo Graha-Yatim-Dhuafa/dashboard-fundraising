@@ -1,6 +1,7 @@
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRWNPlJVMK7e3hi2ZxNYUMWnvv9yndpajgvUUyYTy1GDV9C5pG2oTmStyyYtMOSE9RpPeWQjTESQUr8/pub?gid=688887543&single=true&output=csv';
 const TARGET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRWNPlJVMK7e3hi2ZxNYUMWnvv9yndpajgvUUyYTy1GDV9C5pG2oTmStyyYtMOSE9RpPeWQjTESQUr8/pub?gid=0&single=true&output=csv';
 const Y2025_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRWNPlJVMK7e3hi2ZxNYUMWnvv9yndpajgvUUyYTy1GDV9C5pG2oTmStyyYtMOSE9RpPeWQjTESQUr8/pub?gid=948017490&single=true&output=csv';
+const CRM_TARGET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRWNPlJVMK7e3hi2ZxNYUMWnvv9yndpajgvUUyYTy1GDV9C5pG2oTmStyyYtMOSE9RpPeWQjTESQUr8/pub?gid=1318951729&single=true&output=csv';
 const CORS_PROXIES = [
   u => 'https://corsproxy.io/?' + encodeURIComponent(u),
   u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)
@@ -40,6 +41,7 @@ const FALLBACK_Y2025 = [
 let ALL = [];
 let TARGET_DATA = []; // [{bulan, target, realisasi, selisih}] 2026
 let Y2025_DATA = []; // realisasi 2025 per bulan
+let CRM_TARGET_DATA = []; // [{crm, pertumbuhan, months:{Januari:n,...}, total_target}]
 let FILTER_OPTS = { programs:[], jenis_list:[], user_inserts:[], crms:[], via_himpuns:[], min_date:'', max_date:'' };
 let charts = {};
 let dataSource = 'none'; // live | snapshot
@@ -211,7 +213,7 @@ async function tryFetch(url) {
   // Accept transaction CSV or target CSV (BULAN/TARGET)
   const looksCsv = text.includes(',');
   const looksTxn = /Transaksi|Nominal|Tanggal|Tgl Transaksi|Program/i.test(text);
-  const looksTarget = /BULAN|TARGET|REALISASI/i.test(text);
+  const looksTarget = /BULAN|TARGET|REALISASI|FUNDRAISER|JANUARI|AGUSTUS/i.test(text);
   if (!looksCsv || (!looksTxn && !looksTarget)) {
     throw new Error('Bukan CSV valid');
   }
@@ -456,6 +458,304 @@ function monthKeyFromYmd(ymd) {
 }
 
 
+
+function processCrmTargetRows(rawRows) {
+  const monthCols = {
+    'JANUARI': 'Januari', 'FEBRUARI': 'Februari', 'MARET': 'Maret', 'APRIL': 'April',
+    'MEI': 'Mei', 'JUNI': 'Juni', 'JULI': 'Juli', 'AGUSTUS': 'Agustus',
+    'SEPTEMBER': 'September', 'OKTOBER': 'Oktober', 'NOVEMBER': 'November', 'DESEMBER': 'Desember'
+  };
+  const rows = [];
+  rawRows.forEach(row => {
+    const crm = String(row['CRM / FUNDRAISER'] || row['CRM'] || row['Fundraiser'] || '').trim();
+    if (!crm) return;
+    const lower = crm.toLowerCase();
+    if (lower === 'total' || lower.startsWith('total')) return;
+    const months = {};
+    Object.keys(monthCols).forEach(k => {
+      // find column case-insensitive
+      let val = 0;
+      for (const col of Object.keys(row)) {
+        if (String(col).trim().toUpperCase() === k) {
+          val = parseNum(row[col]);
+          break;
+        }
+      }
+      months[monthCols[k]] = val;
+    });
+    let totalTarget = 0;
+    for (const col of Object.keys(row)) {
+      if (/total/i.test(String(col))) {
+        totalTarget = parseNum(row[col]);
+        break;
+      }
+    }
+    if (!totalTarget) totalTarget = Object.values(months).reduce((s, v) => s + v, 0);
+    rows.push({
+      crm,
+      pertumbuhan: String(row['PERTUMBUHAN'] || row['Pertumbuhan'] || '').trim(),
+      months,
+      total_target: totalTarget
+    });
+  });
+  CRM_TARGET_DATA = rows;
+  return rows;
+}
+
+async function loadCrmTargetData() {
+  const baseUrl = CRM_TARGET_CSV_URL + (CRM_TARGET_CSV_URL.includes('?') ? '&' : '?') + '_t=' + Date.now();
+  const urlsToTry = [baseUrl, ...CORS_PROXIES.map(fn => fn(baseUrl))];
+  for (const url of urlsToTry) {
+    try {
+      const text = await tryFetch(url);
+      const results = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+      if (!results.data || !results.data.length) throw new Error('CRM target kosong');
+      processCrmTargetRows(results.data);
+      if (CRM_TARGET_DATA.length) return true;
+    } catch (e) { /* silent */ }
+  }
+  return false;
+}
+
+function getCrmRealisasiByMonth() {
+  // month name -> { crmName -> total }
+  // empty CRM (-) dihitung ke M Alfin Al-Haris
+  const map = {};
+  ALL.forEach(r => {
+    const b = monthKeyFromYmd(r.tgl);
+    if (!b) return;
+    if (!map[b]) map[b] = {};
+    let crm = (r.crm || '').trim();
+    if (!crm) crm = 'M Alfin Al-Haris';
+    map[b][crm] = (map[b][crm] || 0) + r.nominal;
+  });
+  return map;
+}
+
+const PUNDI_MEMBERS = ['apip yunus 1', 'apip yunus 2', 'muhamad sidik 1', 'muhammad sidik 1'];
+
+function isPundiMember(name) {
+  const n = String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return PUNDI_MEMBERS.includes(n);
+}
+
+function isPundiTargetRow(crmName) {
+  return /^pundi/i.test(String(crmName || '').trim());
+}
+
+// Alias nama CRM di transaksi → nama di sheet target
+const CRM_NAME_ALIASES = {
+  'muhammad sidik': 'JEMPUT DT',
+  'muhamad sidik': 'JEMPUT DT',
+  'muhammad sidik 1': 'Muhamad Sidik 1' // tetap untuk PUNDI member; JEMPUT DT terpisah
+};
+
+function normalizeCrmAlias(name) {
+  const n = String(name || '').trim();
+  if (!n) return n;
+  const mapped = CRM_NAME_ALIASES[n.toLowerCase()];
+  return mapped || n;
+}
+
+function sumRealisasiForCrm(realBag, crmName) {
+  // realBag: { crmName -> total } for one month (or aggregated)
+  if (!realBag) return 0;
+  const keys = Object.keys(realBag);
+  if (isPundiTargetRow(crmName)) {
+    let s = 0;
+    keys.forEach(k => {
+      if (isPundiMember(k) || isPundiTargetRow(k)) s += realBag[k] || 0;
+    });
+    return s;
+  }
+  // JEMPUT DT: sheet name + transaksi "Muhammad sidik" (tanpa angka 1)
+  if (/jemput\s*dt/i.test(String(crmName)) || /^muhammad?\s+sidik$/i.test(String(crmName).trim())) {
+    let s = 0;
+    keys.forEach(k => {
+      const kl = k.toLowerCase().trim();
+      if (/jemput\s*dt/i.test(k) || kl === 'muhammad sidik' || kl === 'muhamad sidik') {
+        if (/\s+1$/.test(kl)) return; // sidik 1 → PUNDI
+        s += realBag[k] || 0;
+      }
+    });
+    return s;
+  }
+  // exact then case-insensitive
+  if (realBag[crmName] != null) return realBag[crmName];
+  const key = keys.find(k => k.toLowerCase() === String(crmName).toLowerCase());
+  if (key) return realBag[key];
+  // coba alias terbalik
+  const aliasKey = keys.find(k => normalizeCrmAlias(k).toLowerCase() === String(crmName).toLowerCase());
+  return aliasKey ? realBag[aliasKey] : 0;
+}
+
+function mergeRealisasiAllMonths(realMap, months) {
+  const merged = {};
+  months.forEach(m => {
+    const part = realMap[m] || {};
+    Object.keys(part).forEach(k => {
+      merged[k] = (merged[k] || 0) + part[k];
+    });
+  });
+  return merged;
+}
+
+function renderCrmTargetDashboard() {
+  const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const sel = document.getElementById('fCrmTargetMonth');
+  if (!sel) return;
+
+  const ALL_MONTHS_VAL = '__ALL__';
+  const prev = sel.value;
+  if (!sel.options.length) {
+    const optAll = document.createElement('option');
+    optAll.value = ALL_MONTHS_VAL;
+    optAll.textContent = 'Semua bulan (YTD)';
+    sel.appendChild(optAll);
+    months.forEach((m) => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      sel.appendChild(opt);
+    });
+    const now = new Date();
+    sel.value = months[now.getMonth()] || 'Agustus';
+    sel.onchange = () => renderCrmTargetDashboard();
+  }
+  if (prev && (prev === ALL_MONTHS_VAL || months.includes(prev))) sel.value = prev;
+
+  const bulan = sel.value || months[new Date().getMonth()];
+  const isAllMonths = bulan === ALL_MONTHS_VAL;
+  const realMap = getCrmRealisasiByMonth();
+  const realBag = isAllMonths ? mergeRealisasiAllMonths(realMap, months) : (realMap[bulan] || {});
+
+  const rows = (CRM_TARGET_DATA || []).map(t => {
+    let target = 0;
+    if (isAllMonths) {
+      target = t.total_target || Object.values(t.months || {}).reduce((s, v) => s + (v || 0), 0);
+    } else {
+      target = (t.months && t.months[bulan]) || 0;
+    }
+    const real = sumRealisasiForCrm(realBag, t.crm);
+    const pct = target ? (real / target * 100) : (real ? 100 : 0);
+    const gap = target - real;
+    let label = t.crm;
+    if (isPundiTargetRow(t.crm)) label = 'PUNDI';
+    else if (/jemput\s*dt/i.test(t.crm) || /^muhammad?\s+sidik$/i.test(String(t.crm).trim())) label = 'JEMPUT DT';
+    return { crm: t.crm, label, target, real, pct, gap, pertumbuhan: t.pertumbuhan };
+  }).filter(r => r.target > 0 || r.real > 0);
+  // urutan mengikuti sheet (jangan di-sort ulang)
+
+  const sumT = rows.reduce((s, r) => s + r.target, 0);
+  const sumR = rows.reduce((s, r) => s + r.real, 0);
+  const pctAll = sumT ? (sumR / sumT * 100) : 0;
+  const above = rows.filter(r => r.pct >= 100).length;
+  const below = rows.filter(r => r.pct < 100).length;
+  const periodLabel = isAllMonths ? 'Semua bulan' : bulan;
+
+  const kpiEl = document.getElementById('crmTargetKpiGrid');
+  if (kpiEl) {
+    kpiEl.innerHTML = `
+      <div class="kpi-card blue"><div class="label">Target CRM ${periodLabel}</div><div class="value">${formatRp(sumT)}</div><div class="sub">${formatFull(sumT)}</div></div>
+      <div class="kpi-card green"><div class="label">Realisasi CRM ${periodLabel}</div><div class="value">${formatRp(sumR)}</div><div class="sub">${formatFull(sumR)}</div></div>
+      <div class="kpi-card ${pctAll >= 100 ? 'green' : 'orange'}"><div class="label">Pencapaian</div><div class="value">${pctAll.toFixed(1)}%</div><div class="sub">agregat semua CRM</div></div>
+      <div class="kpi-card teal"><div class="label">CRM ≥ Target</div><div class="value">${above}</div><div class="sub">dari ${rows.length} CRM</div></div>
+      <div class="kpi-card red"><div class="label">CRM &lt; Target</div><div class="value">${below}</div><div class="sub">belum tercapai</div></div>
+      <div class="kpi-card purple"><div class="label">Sisa Target</div><div class="value">${formatRp(Math.max(0, sumT - sumR))}</div><div class="sub">${sumR > sumT ? 'Surplus ' + formatRp(sumR - sumT) : formatFull(Math.max(0, sumT - sumR))}</div></div>
+    `;
+  }
+
+  // chart — SEMUA CRM, horizontal bar
+  const chartRows = rows;
+  if (charts.crmTarget) { try { charts.crmTarget.destroy(); } catch(e) {} }
+  const canvas = document.getElementById('chartCrmTarget');
+  if (canvas) {
+    // tinggi menyesuaikan jumlah CRM
+    const wrap = canvas.parentElement;
+    if (wrap) wrap.style.height = Math.max(420, chartRows.length * 28 + 80) + 'px';
+    charts.crmTarget = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: chartRows.map(r => r.label || r.crm),
+        datasets: [
+          {
+            label: 'Target',
+            data: chartRows.map(r => r.target),
+            backgroundColor: 'rgba(37,99,235,0.65)',
+            borderColor: '#2563eb',
+            borderWidth: 1,
+            borderRadius: 4
+          },
+          {
+            label: 'Realisasi',
+            data: chartRows.map(r => r.real),
+            backgroundColor: 'rgba(5,150,105,0.75)',
+            borderColor: '#059669',
+            borderWidth: 1,
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { labels: { color: '#64748b', font: { size: 11 } } },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: '#fff',
+            titleColor: '#0f172a',
+            bodyColor: '#0f172a',
+            borderColor: '#e2e8f0',
+            borderWidth: 1,
+            callbacks: {
+              label: ctx => ' ' + ctx.dataset.label + ': ' + formatFull(ctx.raw),
+              afterBody: (items) => {
+                if (items.length < 2) return '';
+                const t = items[0].raw || 0, r = items[1].raw || 0;
+                if (!t) return '';
+                const pct = (r / t * 100);
+                const gap = t - r;
+                return [
+                  ' Pencapaian: ' + pct.toFixed(1) + '%',
+                  gap >= 0 ? ' Kurang: ' + formatFull(gap) : ' Surplus: ' + formatFull(-gap)
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#64748b', callback: v => formatRp(v) }, grid: { color: 'rgba(226,232,240,0.9)' } },
+          y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  const tbody = document.querySelector('#tableCrmTarget tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    rows.forEach((r, i) => {
+      const tr = document.createElement('tr');
+      const gapLabel = r.gap >= 0 ? formatFull(r.gap) : ('Surplus ' + formatFull(-r.gap));
+      tr.innerHTML = `<td><span class="rank">${i}</span></td>
+        <td>${r.label || r.crm}</td>
+        <td class="num">${formatFull(r.target)}</td>
+        <td class="num">${formatFull(r.real)}</td>
+        <td class="num">${r.pct.toFixed(1)}%</td>
+        <td class="num">${gapLabel}</td>`;
+      tbody.appendChild(tr);
+    });
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Data target CRM belum tersedia</td></tr>';
+    }
+  }
+}
+
+
 function getRealisasi2026ByMonth() {
   const liveByMonth = {};
   ALL.forEach(r => {
@@ -689,6 +989,7 @@ function renderAll(rows) {
   destroyCharts();
   renderTargetChart();
   renderYoyChart();
+  renderCrmTargetDashboard();
 
   document.getElementById('kpiGrid').innerHTML = `
     <div class="kpi-card green"><div class="label">Total Dana</div><div class="value">${formatRp(a.total)}</div><div class="sub">${formatFull(a.total)}</div></div>
@@ -856,7 +1157,7 @@ function renderAll(rows) {
   donorsBody.innerHTML = '';
   a.topDonors.forEach((d,i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><span class="rank">${i+1}</span></td><td>${d[0]}</td><td class="num">${formatFull(d[1])}</td>`;
+    tr.innerHTML = `<td><span class="rank">${i}</span></td><td>${d[0]}</td><td class="num">${formatFull(d[1])}</td>`;
     donorsBody.appendChild(tr);
   });
   if (!a.topDonors.length) donorsBody.innerHTML = '<tr><td colspan="3" class="empty-state">Tidak ada data</td></tr>';
@@ -866,7 +1167,7 @@ function renderAll(rows) {
   a.progSorted.forEach((p,i) => {
     const pct = a.total ? ((p[1].total/a.total)*100).toFixed(1) : 0;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><span class="rank">${i+1}</span></td><td>${p[0]}<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></td><td class="num">${formatRp(p[1].total)}</td><td class="num">${p[1].count}</td>`;
+    tr.innerHTML = `<td><span class="rank">${i}</span></td><td>${p[0]}<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></td><td class="num">${formatRp(p[1].total)}</td><td class="num">${p[1].count}</td>`;
     progBody.appendChild(tr);
   });
   if (!a.progSorted.length) progBody.innerHTML = '<tr><td colspan="4" class="empty-state">Tidak ada data</td></tr>';
@@ -897,6 +1198,8 @@ function switchTab(name) {
     } else if (name === 'global') {
       renderTargetChart();
       renderYoyChart();
+    } else if (name === 'crm') {
+      renderCrmTargetDashboard();
     }
   }, 30);
 }
@@ -924,10 +1227,12 @@ async function startDashboard() {
   document.getElementById('loadingOverlay').classList.remove('hidden');
   await loadTargetData();
   await loadY2025Data();
+  await loadCrmTargetData();
   await loadData(false);
   setInterval(async () => {
     await loadTargetData();
     await loadY2025Data();
+    await loadCrmTargetData();
     await loadData(true);
   }, AUTO_REFRESH_MS);
 }

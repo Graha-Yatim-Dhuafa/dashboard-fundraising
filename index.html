@@ -116,6 +116,14 @@
         <button
           type="button"
           class="tab-btn"
+          data-tab="crm"
+          onclick="switchTab('crm')"
+        >
+          Per CRM
+        </button>
+        <button
+          type="button"
+          class="tab-btn"
           data-tab="ops"
           onclick="switchTab('ops')"
         >
@@ -151,6 +159,60 @@
           <div class="chart-card full">
             <h3>Realisasi 2025 vs 2026</h3>
             <div class="chart-wrap tall"><canvas id="chartYoy"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB PER CRM ===== -->
+      <div class="tab-panel" id="tab-crm">
+        <div class="tab-hint">
+          Target & realisasi per CRM (tanpa filter Operasional)
+        </div>
+
+        <div class="section-label">Target per CRM / Fundraiser</div>
+        <div class="filter-panel" style="margin-bottom: 14px">
+          <div
+            class="filter-grid"
+            style="
+              grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+              align-items: end;
+            "
+          >
+            <div class="filter-group">
+              <label>Bulan Target</label>
+              <select id="fCrmTargetMonth"></select>
+            </div>
+          </div>
+        </div>
+        <div
+          class="kpi-grid"
+          id="crmTargetKpiGrid"
+          style="margin-bottom: 14px"
+        ></div>
+        <div class="charts-grid">
+          <div class="chart-card full">
+            <h3>Target vs Realisasi per CRM (bulan dipilih)</h3>
+            <div class="chart-wrap" style="height: min(520px, 70vh)">
+              <canvas id="chartCrmTarget"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="table-card" style="margin-bottom: 8px">
+          <h3>Detail Target CRM</h3>
+          <div class="table-scroll" style="max-height: 420px">
+            <table id="tableCrmTarget">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>CRM / Fundraiser</th>
+                  <th class="num">Target</th>
+                  <th class="num">Realisasi</th>
+                  <th class="num">%</th>
+                  <th class="num">Kurang / Surplus</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
         </div>
       </div>
