@@ -700,25 +700,37 @@ function renderCrmTargetDashboard() {
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: 'y',
-        interaction: { mode: 'index', intersect: false },
+        interaction: { mode: 'nearest', axis: 'y', intersect: true },
         plugins: {
           legend: { labels: { color: '#64748b', font: { size: 11 } } },
           tooltip: {
+            // index + axis y: tampilkan Target & Realisasi untuk CRM yang sama
             mode: 'index',
+            axis: 'y',
             intersect: false,
+            position: 'nearest',
             backgroundColor: '#fff',
             titleColor: '#0f172a',
             bodyColor: '#0f172a',
             borderColor: '#e2e8f0',
             borderWidth: 1,
             callbacks: {
+              title: (items) => {
+                if (!items.length) return '';
+                const idx = items[0].dataIndex;
+                const labels = items[0].chart.data.labels || [];
+                return labels[idx] != null ? String(labels[idx]) : '';
+              },
               label: ctx => ' ' + ctx.dataset.label + ': ' + formatFull(ctx.raw),
               afterBody: (items) => {
-                if (items.length < 2) return '';
-                const t = items[0].raw || 0, r = items[1].raw || 0;
-                if (!t) return '';
-                const pct = (r / t * 100);
-                const gap = t - r;
+                if (!items.length) return '';
+                const byLabel = {};
+                items.forEach(it => { byLabel[it.dataset.label] = it.raw || 0; });
+                const target = byLabel['Target'] != null ? byLabel['Target'] : (items[0].raw || 0);
+                const real = byLabel['Realisasi'] != null ? byLabel['Realisasi'] : (items[1] ? items[1].raw : 0);
+                if (!target) return '';
+                const pct = (real / target * 100);
+                const gap = target - real;
                 return [
                   ' Pencapaian: ' + pct.toFixed(1) + '%',
                   gap >= 0 ? ' Kurang: ' + formatFull(gap) : ' Surplus: ' + formatFull(-gap)
@@ -811,7 +823,7 @@ function renderYoyChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'index', axis: 'x', intersect: false },
       plugins: {
         legend: { labels: { color: '#64748b', font: { size: 11 } } },
         tooltip: {
@@ -823,10 +835,19 @@ function renderYoyChart() {
           borderColor: '#e2e8f0',
           borderWidth: 1,
           callbacks: {
+            title: (items) => {
+              if (!items.length) return '';
+              const idx = items[0].dataIndex;
+              const labels = items[0].chart.data.labels || [];
+              return labels[idx] != null ? String(labels[idx]) : '';
+            },
             label: ctx => ' ' + ctx.dataset.label + ': ' + formatFull(ctx.raw),
             afterBody: (items) => {
               if (items.length < 2) return '';
-              const a = items[0].raw || 0, b = items[1].raw || 0;
+              const byLabel = {};
+              items.forEach(it => { byLabel[it.dataset.label] = it.raw || 0; });
+              const a = byLabel['Realisasi 2025'] != null ? byLabel['Realisasi 2025'] : (items[0].raw || 0);
+              const b = byLabel['Realisasi 2026'] != null ? byLabel['Realisasi 2026'] : (items[1].raw || 0);
               if (!a) return ' Δ —';
               const pct = ((b - a) / a * 100);
               return ' Δ ' + (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% vs 2025';
@@ -917,11 +938,12 @@ function renderTargetChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'index', axis: 'x', intersect: false },
       plugins: {
         legend: { labels: { color: '#64748b', font: { size: 11 } } },
         tooltip: {
           mode: 'index',
+          axis: 'x',
           intersect: false,
           backgroundColor: '#ffffff',
           titleColor: '#0f172a',
@@ -929,11 +951,19 @@ function renderTargetChart() {
           borderColor: '#e2e8f0',
           borderWidth: 1,
           callbacks: {
+            title: (items) => {
+              if (!items.length) return '';
+              const idx = items[0].dataIndex;
+              const labels = items[0].chart.data.labels || [];
+              return labels[idx] != null ? String(labels[idx]) : '';
+            },
             label: ctx => ' ' + ctx.dataset.label + ': ' + formatFull(ctx.raw),
             afterBody: (items) => {
-              if (items.length < 2) return '';
-              const target = items[0].raw || 0;
-              const real = items[1].raw || 0;
+              if (!items.length) return '';
+              const byLabel = {};
+              items.forEach(it => { byLabel[it.dataset.label] = it.raw || 0; });
+              const target = byLabel['Target'] != null ? byLabel['Target'] : (items[0].raw || 0);
+              const real = byLabel['Realisasi'] != null ? byLabel['Realisasi'] : (items[1] ? items[1].raw : 0);
               if (!target) return ' Pencapaian: —';
               const pct = (real / target * 100);
               const sisa = target - real;
@@ -1015,10 +1045,11 @@ function renderAll(rows) {
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'index', axis: 'x', intersect: false },
       plugins:{ legend:{ labels:{ color:'#64748b', font:{ size:11 } } },
         tooltip:{
           mode: 'index',
+          axis: 'x',
           intersect: false,
           backgroundColor:'#ffffff',
           titleColor:'#0f172a',
@@ -1058,11 +1089,12 @@ function renderAll(rows) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
+        interaction: { mode: 'index', axis: 'x', intersect: false },
         plugins: {
           legend: { labels: { color: '#64748b', font: { size: 11 } } },
           tooltip: {
             mode: 'index',
+            axis: 'x',
             intersect: false,
             backgroundColor: '#ffffff',
             titleColor: '#0f172a',
@@ -1148,7 +1180,10 @@ function renderAll(rows) {
     type:'bar',
     data:{ labels:a.crmSorted.map(x=>x[0]), datasets:[{ label:'Total Dana', data:a.crmSorted.map(x=>x[1].total), backgroundColor:'rgba(147,51,234,0.7)', borderColor:'#9333ea', borderWidth:1, borderRadius:5 }] },
     options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
-      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: ctx=>' '+formatFull(ctx.raw) } } },
+      interaction:{ mode:'nearest', axis:'y', intersect:true },
+      plugins:{ legend:{ display:false },
+        tooltip:{ mode:'nearest', axis:'y', intersect:true,
+          callbacks:{ title: items => items[0] ? items[0].label : '', label: ctx=>' '+formatFull(ctx.raw) } } },
       scales:{ x:{ ticks:{ color:'#64748b', callback:v=>formatRp(v) }, grid:{ color:'rgba(226,232,240,0.9)' } },
                y:{ ticks:{ color:'#64748b', font:{ size:10 } }, grid:{ display:false } } } }
   });
