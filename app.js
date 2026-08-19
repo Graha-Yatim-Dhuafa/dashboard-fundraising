@@ -795,7 +795,7 @@ function renderCrmTargetDashboard() {
     rows.forEach((r, i) => {
       const tr = document.createElement('tr');
       const gapLabel = r.gap >= 0 ? formatFull(r.gap) : ('Surplus ' + formatFull(-r.gap));
-      tr.innerHTML = `<td><span class="rank">${i}</span></td>
+      tr.innerHTML = `<td><span class="rank rank-flat">${i}</span></td>
         <td>${r.label || r.crm}</td>
         <td class="num">${formatFull(r.target)}</td>
         <td class="num">${formatFull(r.real)}</td>
@@ -1234,7 +1234,7 @@ function renderAll(rows) {
   donorsBody.innerHTML = '';
   a.topDonors.forEach((d,i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><span class="rank">${i}</span></td><td>${d[0]}</td><td class="num">${formatFull(d[1])}</td>`;
+    tr.innerHTML = `<td><span class="rank">${i+1}</span></td><td>${d[0]}</td><td class="num">${formatFull(d[1])}</td>`;
     donorsBody.appendChild(tr);
   });
   if (!a.topDonors.length) donorsBody.innerHTML = '<tr><td colspan="3" class="empty-state">Tidak ada data</td></tr>';
@@ -1244,7 +1244,7 @@ function renderAll(rows) {
   a.progSorted.forEach((p,i) => {
     const pct = a.total ? ((p[1].total/a.total)*100).toFixed(1) : 0;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><span class="rank">${i}</span></td><td>${p[0]}<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></td><td class="num">${formatRp(p[1].total)}</td><td class="num">${p[1].count}</td>`;
+    tr.innerHTML = `<td><span class="rank">${i+1}</span></td><td>${p[0]}<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></td><td class="num">${formatRp(p[1].total)}</td><td class="num">${p[1].count}</td>`;
     progBody.appendChild(tr);
   });
   if (!a.progSorted.length) progBody.innerHTML = '<tr><td colspan="4" class="empty-state">Tidak ada data</td></tr>';
