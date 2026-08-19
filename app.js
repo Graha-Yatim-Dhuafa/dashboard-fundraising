@@ -142,7 +142,7 @@ function processRows(rawRows) {
     const nominal = parseNominal(row['Transaksi'] || row['Nominal'] || row['nominal'] || row['TRANSAKSI']);
     const program = String(row['Program'] || '').trim();
     const userInsert = String(row['User Insert'] || '').trim();
-    const crm = String(row['CRM'] || '').trim();
+    const crm = String(row['Fundraiser'] || row['FUNDRAISER'] || row['CRM'] || row['CRM / FUNDRAISER'] || '').trim();
     const via = String(row['Via Himpun'] || '').trim();
     const nama = String(row['Nama Donatur'] || '').trim();
     const jenis = String(row['Jenis Transaksi'] || '').trim();
@@ -252,7 +252,7 @@ async function tryFetch(url) {
   // Accept transaction CSV or target CSV (BULAN/TARGET)
   const looksCsv = text.includes(',');
   const looksTxn = /Transaksi|Nominal|Tanggal|Tgl Transaksi|Program/i.test(text);
-  const looksTarget = /BULAN|TARGET|REALISASI|FUNDRAISER|JANUARI|AGUSTUS/i.test(text);
+  const looksTarget = /BULAN|TARGET|REALISASI|FUNDRAISER|JANUARI|AGUSTUS|CRM/i.test(text);
   if (!looksCsv || (!looksTxn && !looksTarget)) {
     throw new Error('Bukan CSV valid');
   }
@@ -455,7 +455,7 @@ function aggregate(rows) {
     const v = r.via_himpun || 'Lainnya'; viaMap[v] = (viaMap[v]||0) + r.nominal;
     const s = r.sumber || 'Lainnya'; sumberMap[s] = (sumberMap[s]||0) + r.nominal;
     const d = r.jenis_donatur || 'Lainnya'; jdMap[d] = (jdMap[d]||0) + r.nominal;
-    // CRM: tampil terpisah + bar gabungan Alfin dengan kosong (-)
+    // Fundraiser: tampil terpisah + bar gabungan Alfin dengan kosong (-)
     {
       const crmRaw = (r.crm || '').trim();
       const isEmptyCrm = !crmRaw;
@@ -506,7 +506,7 @@ function processCrmTargetRows(rawRows) {
   };
   const rows = [];
   rawRows.forEach(row => {
-    const crm = String(row['CRM / FUNDRAISER'] || row['CRM'] || row['Fundraiser'] || '').trim();
+    const crm = String(row['Fundraiser'] || row['FUNDRAISER'] || row['CRM / FUNDRAISER'] || row['CRM'] || '').trim();
     if (!crm) return;
     const lower = crm.toLowerCase();
     if (lower === 'total' || lower.startsWith('total')) return;
@@ -558,7 +558,7 @@ async function loadCrmTargetData() {
 
 function getCrmRealisasiByMonth() {
   // month name -> { crmName -> total }
-  // empty CRM (-) dihitung ke M Alfin Al-Haris
+  // Fundraiser kosong (-) dihitung ke M Alfin Al-Haris
   const map = {};
   ALL.forEach(r => {
     const b = monthKeyFromYmd(r.tgl);
@@ -582,7 +582,7 @@ function isPundiTargetRow(crmName) {
   return /^pundi/i.test(String(crmName || '').trim());
 }
 
-// Alias nama CRM di transaksi → nama di sheet target
+// Alias nama fundraiser di transaksi → nama di sheet target
 const CRM_NAME_ALIASES = {
   'muhammad sidik': 'JEMPUT DT',
   'muhamad sidik': 'JEMPUT DT',
@@ -695,11 +695,11 @@ function renderCrmTargetDashboard() {
   const kpiEl = document.getElementById('crmTargetKpiGrid');
   if (kpiEl) {
     kpiEl.innerHTML = `
-      <div class="kpi-card blue"><div class="label">Target CRM ${periodLabel}</div><div class="value">${formatRp(sumT)}</div><div class="sub">${formatFull(sumT)}</div></div>
-      <div class="kpi-card green"><div class="label">Realisasi CRM ${periodLabel}</div><div class="value">${formatRp(sumR)}</div><div class="sub">${formatFull(sumR)}</div></div>
-      <div class="kpi-card ${pctAll >= 100 ? 'green' : 'orange'}"><div class="label">Pencapaian</div><div class="value">${pctAll.toFixed(1)}%</div><div class="sub">agregat semua CRM</div></div>
-      <div class="kpi-card teal"><div class="label">CRM ≥ Target</div><div class="value">${above}</div><div class="sub">dari ${rows.length} CRM</div></div>
-      <div class="kpi-card red"><div class="label">CRM &lt; Target</div><div class="value">${below}</div><div class="sub">belum tercapai</div></div>
+      <div class="kpi-card blue"><div class="label">Target Fundraiser ${periodLabel}</div><div class="value">${formatRp(sumT)}</div><div class="sub">${formatFull(sumT)}</div></div>
+      <div class="kpi-card green"><div class="label">Realisasi Fundraiser ${periodLabel}</div><div class="value">${formatRp(sumR)}</div><div class="sub">${formatFull(sumR)}</div></div>
+      <div class="kpi-card ${pctAll >= 100 ? 'green' : 'orange'}"><div class="label">Pencapaian</div><div class="value">${pctAll.toFixed(1)}%</div><div class="sub">agregat semua fundraiser</div></div>
+      <div class="kpi-card teal"><div class="label">Fundraiser ≥ Target</div><div class="value">${above}</div><div class="sub">dari ${rows.length} fundraiser</div></div>
+      <div class="kpi-card red"><div class="label">Fundraiser &lt; Target</div><div class="value">${below}</div><div class="sub">belum tercapai</div></div>
       <div class="kpi-card purple"><div class="label">Sisa Target</div><div class="value">${formatRp(Math.max(0, sumT - sumR))}</div><div class="sub">${sumR > sumT ? 'Surplus ' + formatRp(sumR - sumT) : formatFull(Math.max(0, sumT - sumR))}</div></div>
     `;
   }
@@ -804,7 +804,7 @@ function renderCrmTargetDashboard() {
       tbody.appendChild(tr);
     });
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Data target CRM belum tersedia</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Data target fundraiser belum tersedia</td></tr>';
     }
   }
 }
@@ -1281,10 +1281,10 @@ function downloadCrmTargetChart() {
     const url = out.toDataURL('image/png');
     const a = document.createElement('a');
     const bulanEl = document.getElementById('fCrmTargetMonth');
-    const bulan = bulanEl && bulanEl.value ? String(bulanEl.value).replace(/[^\w\-]+/g, '_') : 'crm';
+    const bulan = bulanEl && bulanEl.value ? String(bulanEl.value).replace(/[^\w\-]+/g, '_') : 'fundraiser';
     const stamp = new Date().toISOString().slice(0, 10);
     a.href = url;
-    a.download = 'target-realisasi-crm-' + bulan + '-' + stamp + '.png';
+    a.download = 'target-realisasi-fundraiser-' + bulan + '-' + stamp + '.png';
     document.body.appendChild(a);
     a.click();
     a.remove();

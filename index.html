@@ -119,7 +119,7 @@
           data-tab="crm"
           onclick="switchTab('crm')"
         >
-          Per CRM
+          Per Fundraiser
         </button>
         <button
           type="button"
@@ -166,10 +166,10 @@
       <!-- ===== TAB PER CRM ===== -->
       <div class="tab-panel" id="tab-crm">
         <div class="tab-hint">
-          Target & realisasi per CRM (tanpa filter Operasional).
+          Target & realisasi per fundraiser (tanpa filter Operasional).
         </div>
 
-        <div class="section-label">Target per CRM / Fundraiser</div>
+        <div class="section-label">Target per Fundraiser</div>
         <div class="filter-panel" style="margin-bottom: 14px">
           <div
             class="filter-grid"
@@ -192,7 +192,7 @@
         <div class="charts-grid">
           <div class="chart-card full">
             <div class="chart-card-head">
-              <h3>Target vs Realisasi per CRM</h3>
+              <h3>Target vs Realisasi per Fundraiser</h3>
               <button
                 type="button"
                 class="btn btn-download"
@@ -209,13 +209,13 @@
           </div>
         </div>
         <div class="table-card" style="margin-bottom: 8px">
-          <h3>Detail Target CRM</h3>
+          <h3>Detail Target Fundraiser</h3>
           <div class="table-scroll" style="max-height: 420px">
             <table id="tableCrmTarget">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>CRM / Fundraiser</th>
+                  <th>Fundraiser</th>
                   <th class="num">Target</th>
                   <th class="num">Realisasi</th>
                   <th class="num">%</th>
@@ -268,7 +268,7 @@
               <select id="fUserInsert" multiple></select>
             </div>
             <div class="filter-group">
-              <label>CRM / Fundraiser</label>
+              <label>Fundraiser</label>
               <select id="fCRM" multiple></select>
             </div>
             <div class="filter-group">
@@ -333,7 +333,7 @@
             <div class="chart-wrap"><canvas id="chartDonatur"></canvas></div>
           </div>
           <div class="chart-card">
-            <h3>Top 10 CRM / Fundraiser</h3>
+            <h3>Top 10 Fundraiser</h3>
             <div class="chart-wrap"><canvas id="chartCRM"></canvas></div>
           </div>
         </div>
@@ -385,7 +385,7 @@
                   <th class="num">Nominal</th>
                   <th>Jenis</th>
                   <th>Via</th>
-                  <th>CRM</th>
+                  <th>Fundraiser</th>
                 </tr>
               </thead>
               <tbody></tbody>
